@@ -288,7 +288,7 @@ function detail(d){
     '<div class="dside">'+
       '<div class="dl2">what it is</div><p>'+esc(d.ds)+'</p>'+
       legalBox+
-      (d.hy&&d.hy.length?'<div class="dl2">hygiene &amp; exposure</div><div class="hylist">'+d.hy.map(f=>'<span class="hyflag'+(/env\/key|PII|LAN IP/.test(f)?' bad':'')+'">'+esc(f)+'</span>').join("")+'</div>':'')+
+      (d.hy&&d.hy.length?'<div class="dl2">hygiene &amp; exposure</div><div class="hylist">'+d.hy.map(f=>'<span class="hyflag'+(/env.key|PII|LAN IP|credential|private key|key format/.test(f)?' bad':'')+'">'+esc(f)+'</span>').join("")+'</div>':'')+
       '<div class="dl2">AI-slop risk</div><div class="slopmeter"><span class="sb"><i style="width:'+d.sl+'%;background:'+slopColor(d.sl)+'"></i></span><span class="sv" style="color:'+slopColor(d.sl)+'">'+d.sl+'</span></div>'+
       '<div class="dl2">sells it</div><div class="taglist">'+up+'</div>'+
       '<div class="dl2">holds it back</div><div class="taglist">'+dn+'</div>'+
