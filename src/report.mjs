@@ -121,7 +121,7 @@ const HTML_HEAD = `<meta charset="utf-8">
   .pod .pscore .g{font-size:17px;color:var(--gold);margin-left:8px}
   .pod .pscore span.o{font-size:15px;color:var(--ink3)}
   .pod .pverd{color:var(--ink2);font-size:13px;margin-top:8px;line-height:1.4}
-  .controls{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:13px 0;margin-top:22px}
+  .controls{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:1px solid var(--line);padding:13px 0;margin-top:22px}
   .controls .wrap{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .presets{display:flex;gap:5px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px}
   .pbtn{font-family:var(--mono);font-size:11.5px;background:transparent;border:0;color:var(--ink2);padding:7px 12px;border-radius:6px;cursor:pointer;transition:.12s;white-space:nowrap}
@@ -133,12 +133,13 @@ const HTML_HEAD = `<meta charset="utf-8">
   .presetnote{font-family:var(--mono);font-size:11px;color:var(--ink3);padding:10px 0 0}
   .presetnote b{color:var(--accent)}
   main{padding:16px 0 70px}
-  table{width:100%;border-collapse:collapse;font-size:13px}
-  thead th{position:sticky;top:var(--ctrl-h,56px);background:var(--bg);text-align:left;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);font-weight:600;padding:10px 8px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap;user-select:none}
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+  thead th{position:sticky;top:var(--ctrl-h,56px);z-index:5;box-shadow:0 -24px 0 var(--bg);background:var(--bg);text-align:left;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);font-weight:600;padding:10px 8px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap;user-select:none}
   thead th:hover{color:var(--ink)} thead th.sorted{color:var(--accent)}
   th.rk,td.rk{text-align:center;width:44px}
   th.sc,td.sc{text-align:right;font-variant-numeric:tabular-nums}
-  tbody tr{border-bottom:1px solid var(--line);cursor:pointer;transition:background .1s}
+  tbody tr{cursor:pointer;transition:background .1s}
+  tbody tr>td{border-bottom:1px solid var(--line)}
   tbody tr:hover{background:var(--panel)} tbody tr.open{background:var(--panel)}
   td{padding:11px 8px;vertical-align:middle}
   .rank{font-family:var(--mono);font-weight:700;color:var(--ink3);font-variant-numeric:tabular-nums}
@@ -190,7 +191,8 @@ const HTML_HEAD = `<meta charset="utf-8">
   .aiflag{font-family:var(--mono);font-size:9px;color:var(--accent);border:1px solid var(--accent2);border-radius:8px;padding:0 5px;margin-left:5px}
   .glink{font-family:var(--mono);font-size:12px;color:var(--accent);text-decoration:none} .glink:hover{text-decoration:underline}
   footer{border-top:1px solid var(--line);padding:24px 0;color:var(--ink3);font-family:var(--mono);font-size:11px;text-align:center;line-height:1.7}
-  .scrollx{overflow-x:auto}
+  .scrollx{overflow-x:visible}
+  @media (max-width:900px){.scrollx{overflow-x:auto}}
   @media(max-width:820px){.podium{grid-template-columns:1fr}.dbox{grid-template-columns:1fr;padding-left:14px}.dim .dl{width:120px}}
 </style>`;
 
