@@ -1,0 +1,17 @@
+{
+  "name": "kitsune-repo-scanner",
+  "version": "0.1.0",
+  "description": "Scan a GitHub org (or user) and grade every repo on a 30-category market-reception rubric: public sentiment, shareability, and AI-slop risk. Outputs a savable HTML scouting report + JSON.",
+  "type": "module",
+  "bin": {
+    "kitsune-scan": "bin/kitsune-scan.mjs"
+  },
+  "scripts": {
+    "scan": "node bin/kitsune-scan.mjs",
+    "mcp": "node mcp/server.mjs"
+  },
+  "keywords": ["github", "repo", "scanner", "rubric", "grading", "ai-slop", "open-source", "cli"],
+  "license": "MIT",
+  "engines": { "node": ">=18" },
+  "dependencies": {}
+}
