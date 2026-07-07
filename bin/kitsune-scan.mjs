@@ -79,10 +79,16 @@ const html = buildReport(json);
 const htmlPath = resolve(outDir, "index.html");
 await writeFile(htmlPath, html);
 
-const avg = Math.round(graded.reduce((a, g) => a + g.total, 0) / graded.length);
-const topSlop = [...graded].sort((a, b) => b.slopRisk - a.slopRisk)[0];
-console.log(`  done. avg grade ${avg}/1000  ·  top pick: ${graded[0].repo.name} (${graded[0].grade})`);
-console.log(`  highest slop risk: ${topSlop.repo.name} (${topSlop.slopRisk}/100)`);
+if (graded.length) {
+  const avg = Math.round(graded.reduce((a, g) => a + g.total, 0) / graded.length);
+  const topSlop = [...graded].sort((a, b) => b.slopRisk - a.slopRisk)[0];
+  const legal = graded.reduce((m, g) => (m[g.legal.oss] = (m[g.legal.oss] || 0) + 1, m), {});
+  console.log(`  done. avg grade ${avg}/1000  ·  top pick: ${graded[0].repo.name} (${graded[0].grade})`);
+  console.log(`  highest slop risk: ${topSlop.repo.name} (${topSlop.slopRisk}/100)`);
+  console.log(`  OSS-readiness: ${legal.safe || 0} safe · ${legal.borderline || 0} borderline · ${legal.no || 0} do-not-OSS`);
+} else {
+  console.log(`  no repos matched (all filtered out?)`);
+}
 console.log(`\n  report: ${htmlPath}\n`);
 
 if (flag("--open")) {
