@@ -230,11 +230,11 @@ const P=PAYLOAD, D=P.D, DIM=P.DIM, SHORT=P.SHORT, GRP=P.GRP, GL=P.GROUP_LABELS, 
 const GORDER=["hook","sentiment","trust","slop","substance","growth"];
 const PRESETS={
   balanced:{label:"Balanced",w:P.DEFAULT_W,d:"The full rubric weights: hook and public sentiment lead, trust and AI-slop next, substance and growth round it out."},
-  postfirst:{label:"Post first",w:[10,10,10,10,10, 10,10,10,10,10, 3,3,4,4,5,4, 3,3,2,3, 1,2,2,1,2, 8,3,6,3,2],d:"What to release and post NOW: hook, public sentiment, shareability, and virality dominate; code substance barely counts."},
+  postfirst:{label:"Best to post",w:[10,10,10,10,10, 10,10,10,10,10, 3,3,4,4,5,4, 3,3,2,3, 1,2,2,1,2, 8,3,6,3,2],d:"Best to post on Reddit right now: hook, public sentiment, shareability, and virality dominate; code substance barely counts. Top of the list is your strongest post."},
   antislop:{label:"Least slop",w:[2,3,2,4,3, 2,2,2,2,3, 3,3,2,3,4,3, 12,12,12,12, 3,8,3,4,3, 2,3,3,2,2],d:"Ranks by human craft: the four AI-slop axes plus originality and depth carry the weight. Top = least machine-generated."},
   fastwin:{label:"Fast wins",w:[7,7,6,7,6, 6,6,6,6,6, 6,7,8,7,7,5, 3,3,3,3, 7,4,5,3,5, 5,4,6,3,7],d:"Lowest effort to ship and post: freshness, low setup friction, docs, polish, and works-out-of-the-box weighted up."}
 };
-let preset="balanced", sortKey="score", sortDir=-1, openRow=null;
+let preset="postfirst", sortKey="score", sortDir=-1, openRow=null;
 
 function composite(d,w){let s=0,tw=0;for(let i=0;i<30;i++){s+=d.s[i]*w[i];tw+=w[i];}return Math.round(s/tw);}
 function grade(v){for(const b of BANDS)if(v>=b[0])return b[1];return "F-";}
