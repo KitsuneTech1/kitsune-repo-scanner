@@ -48,6 +48,7 @@ export function buildReport(data) {
     up: g.strengths.map(x => x.name),
     dn: g.weaknesses.map(x => x.name),
     cap: g.caps || [],
+    lg: g.legal || { oss: "safe", legal: "clean", flags: [], reason: "", license: "" },
     s: CATEGORIES.map(c => (g.scores[c.id] ?? 0) * 100),
   }));
 
@@ -173,6 +174,20 @@ const HTML_HEAD = `<meta charset="utf-8">
   .slopmeter .sb i{display:block;height:100%;border-radius:4px}
   .slopmeter .sv{font-family:var(--mono);font-size:12px;font-weight:700;width:26px;text-align:right}
   .capnote{font-family:var(--mono);font-size:10.5px;color:var(--c3);margin-top:8px}
+  .oss{font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;border-radius:10px;padding:1px 7px}
+  .oss.safe{color:#0c1a12;background:var(--accent)}
+  .oss.border{color:#1c1405;background:var(--gold)}
+  .oss.no{color:#fff;background:#c0483a}
+  .legalbox{margin-top:6px;padding:11px 13px;border:1px solid var(--line);border-radius:9px;background:var(--panel2)}
+  .legalbox .lh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:7px}
+  .legalbox .lv{font-family:var(--mono);font-size:11px;color:var(--ink2)}
+  .legalbox .lv b{color:var(--ink)}
+  .legalbox .lflags{display:flex;gap:5px;flex-wrap:wrap;margin:6px 0}
+  .legalbox .lflag{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:10px;border:1px solid var(--c3);color:var(--c3)}
+  .legalbox .lr{font-size:12.5px;color:var(--ink);margin:5px 0 0;line-height:1.45}
+  .legalbox .lic{font-family:var(--mono);font-size:11px;color:var(--ink2);margin-top:6px}
+  .legalbox .sec{color:#e08a5a;font-weight:700}
+  .aiflag{font-family:var(--mono);font-size:9px;color:var(--accent);border:1px solid var(--accent2);border-radius:8px;padding:0 5px;margin-left:5px}
   .glink{font-family:var(--mono);font-size:12px;color:var(--accent);text-decoration:none} .glink:hover{text-decoration:underline}
   footer{border-top:1px solid var(--line);padding:24px 0;color:var(--ink3);font-family:var(--mono);font-size:11px;text-align:center;line-height:1.7}
   .scrollx{overflow-x:auto}
@@ -191,6 +206,7 @@ const HTML_APP = `
 <div class="controls"><div class="wrap">
   <div class="presets" id="presets"></div>
   <input id="q" placeholder="search repos..." autocomplete="off">
+  <select id="oss"></select>
   <select id="cat"></select>
   <select id="sort"></select>
   <span class="count" id="count"></span>
@@ -214,6 +230,8 @@ let preset="balanced", sortKey="score", sortDir=-1, openRow=null;
 function composite(d,w){let s=0,tw=0;for(let i=0;i<30;i++){s+=d.s[i]*w[i];tw+=w[i];}return Math.round(s/tw);}
 function grade(v){for(const b of BANDS)if(v>=b[0])return b[1];return "F-";}
 function slopColor(v){const h=Math.round(150-(v/100)*150);return "hsl("+h+" 55% 52%)";}
+const OSSCLS={safe:"safe",borderline:"border",no:"no"};
+const OSSLBL={safe:"OSS-safe",borderline:"borderline",no:"no-OSS"};
 function ageStr(ts){if(!ts)return "—";const d=(Date.now()-ts)/86400000;if(d<31)return Math.max(1,Math.round(d))+"d";if(d<365)return Math.round(d/30)+"mo";return (d/365).toFixed(1)+"y";}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 
@@ -243,9 +261,24 @@ function detail(d){
   const up=d.up.map(t=>'<span class="tag up">'+esc(t)+'</span>').join("");
   const dn=d.dn.map(t=>'<span class="tag dn">'+esc(t)+'</span>').join("");
   const cap=d.cap&&d.cap.length?'<div class="capnote">caps at default weights: '+d.cap.map(esc).join(" · ")+'</div>':"";
+  const L=d.lg||{oss:"safe",legal:"clean",flags:[],reason:"",license:""};
+  const lflags=(L.flags||[]).map(f=>'<span class="lflag">'+esc(f)+'</span>').join("");
+  const legalBox='<div class="dl2">legal &amp; open-source readiness</div>'+
+    '<div class="legalbox"><div class="lh">'+
+      '<span class="oss '+(OSSCLS[L.oss]||"safe")+'">'+(OSSLBL[L.oss]||L.oss)+'</span>'+
+      '<span class="lv">legal status: <b>'+esc(L.legal)+'</b></span>'+
+      '<span class="lv">route: <b>'+esc(L.route||(L.oss==="safe"?"kitsunetech1":"personal"))+'</b></span>'+
+      (L.aiJudged?'<span class="aiflag">AI-judged</span>':'')+
+    '</div>'+
+    (lflags?'<div class="lflags">'+lflags+'</div>':'')+
+    '<p class="lr">'+esc(L.reason||"")+'</p>'+
+    (L.secrets?'<p class="lr"><span class="sec">! possible secret/key committed - scrub before publishing.</span></p>':'')+
+    '<div class="lic">'+esc(L.license||"")+'</div>'+
+    '</div>';
   return '<div class="dbox"><div class="dcol">'+grp+'</div>'+
     '<div class="dside">'+
       '<div class="dl2">what it is</div><p>'+esc(d.ds)+'</p>'+
+      legalBox+
       '<div class="dl2">AI-slop risk</div><div class="slopmeter"><span class="sb"><i style="width:'+d.sl+'%;background:'+slopColor(d.sl)+'"></i></span><span class="sv" style="color:'+slopColor(d.sl)+'">'+d.sl+'</span></div>'+
       '<div class="dl2">sells it</div><div class="taglist">'+up+'</div>'+
       '<div class="dl2">holds it back</div><div class="taglist">'+dn+'</div>'+
@@ -258,7 +291,8 @@ function render(){
   enrich();
   const term=document.getElementById("q").value.trim().toLowerCase();
   const catf=document.getElementById("cat").value;
-  let rows=D.filter(d=>(!term||d.n.toLowerCase().includes(term)||d.ds.toLowerCase().includes(term))&&(!catf||d.c===catf));
+  const ossf=document.getElementById("oss").value;
+  let rows=D.filter(d=>(!term||d.n.toLowerCase().includes(term)||d.ds.toLowerCase().includes(term))&&(!catf||d.c===catf)&&(!ossf||d.lg.oss===ossf));
   // sort
   rows.sort((a,b)=>{
     if(sortKey==="name")return sortDir*a.n.localeCompare(b.n);
@@ -271,7 +305,8 @@ function render(){
     const tr=document.createElement("tr");tr.className=idx<3&&sortKey==="score"&&sortDir<0?"top3":"";
     tr.innerHTML='<td class="rk"><span class="rank">'+(idx+1)+'</span></td>'+
       '<td><div class="nm">'+esc(d.n)+(d.pv?'<span class="pv">priv</span>':'')+'</div>'+
-        '<div class="ct"><span>'+esc(d.c)+'</span><span>★ '+d.st+'</span><span>'+ageStr(d.ts)+'</span>'+
+        '<div class="ct"><span class="oss '+(OSSCLS[d.lg.oss]||"safe")+'">'+(OSSLBL[d.lg.oss]||"")+'</span>'+
+        '<span>'+esc(d.c)+'</span><span>★ '+d.st+'</span><span>'+ageStr(d.ts)+'</span>'+
         '<span class="slopchip">slop <b style="color:'+slopColor(d.sl)+'">'+d.sl+'</b></span></div></td>'+
       '<td><div class="spark">'+sparkline(d)+'</div></td>'+
       '<td class="sc"><div class="gradecell"><span class="gbadge">'+d.gr+'</span>'+
@@ -299,14 +334,25 @@ function boot(){
   document.getElementById("h1").innerHTML=esc(P.owner)+", <em>every repo ranked</em>";
   const avg=Math.round(D.reduce((a,d)=>a+composite(d,P.DEFAULT_W),0)/D.length);
   const avgslop=Math.round(D.reduce((a,d)=>a+d.sl,0)/D.length);
+  const oc={safe:0,borderline:0,no:0};D.forEach(d=>oc[d.lg.oss]=(oc[d.lg.oss]||0)+1);
   document.getElementById("meta").innerHTML=
     "<span><b>"+D.length+"</b> repos</span><span><b>30</b> dimensions each</span>"+
-    "<span><b>"+(D.length*30)+"</b> scores</span><span>avg <b>"+avg+"</b>/1000</span>"+
-    "<span>avg slop <b>"+avgslop+"</b></span><span>scanned <b>"+P.generated.slice(0,10)+"</b></span>";
+    "<span>avg <b>"+avg+"</b>/1000</span>"+
+    "<span>avg slop <b>"+avgslop+"</b></span>"+
+    "<span style='color:var(--accent)'><b>"+oc.safe+"</b> OSS-safe</span>"+
+    "<span style='color:var(--gold)'><b>"+oc.borderline+"</b> borderline</span>"+
+    "<span style='color:#d46a5a'><b>"+oc.no+"</b> do-not-OSS</span>";
   const pr=document.getElementById("presets");
   Object.keys(PRESETS).forEach(k=>{const b=document.createElement("button");b.className="pbtn"+(k===preset?" on":"");b.textContent=PRESETS[k].label;b.onclick=()=>{preset=k;[...pr.children].forEach(c=>c.classList.remove("on"));b.classList.add("on");render();};pr.appendChild(b);});
   const cat=document.getElementById("cat");cat.innerHTML='<option value="">all languages</option>'+P.cats.map(c=>'<option>'+esc(c)+'</option>').join("");
   cat.onchange=render;
+  const oss=document.getElementById("oss");
+  const oc={safe:0,borderline:0,no:0};D.forEach(d=>oc[d.lg.oss]=(oc[d.lg.oss]||0)+1);
+  oss.innerHTML='<option value="">all OSS status</option>'+
+    '<option value="safe">OSS-safe ('+oc.safe+')</option>'+
+    '<option value="borderline">borderline ('+oc.borderline+')</option>'+
+    '<option value="no">do-not-OSS ('+oc.no+')</option>';
+  oss.onchange=render;
   const sort=document.getElementById("sort");
   [["score","sort: score"],["slop","sort: AI-slop"],["stars","sort: stars"],["fresh","sort: freshness"],["name","sort: A-Z"]].forEach(([v,l])=>{const o=document.createElement("option");o.value=v;o.textContent=l;sort.appendChild(o);});
   sort.onchange=()=>{sortKey=sort.value;sortDir=(sortKey==="name")?1:-1;render();};

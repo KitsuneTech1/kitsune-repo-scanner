@@ -59,6 +59,7 @@ const graded = await mapPool(repos, async (repo) => {
       if (ai.description) result.description = ai.description;
       if (ai.scores) SUBJECTIVE_APPLY(result, ai.scores);
       if (ai.slop_note) result.slopNote = ai.slop_note;
+      if (ai.legal) result.legal = { ...result.legal, ...ai.legal, aiJudged: true };
     }
   }
 

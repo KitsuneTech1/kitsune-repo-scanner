@@ -25,7 +25,9 @@ README (truncated):
 ${(readme || "(empty)").slice(0, 4000)}
 """
 
-Return JSON: {"description":"one plain sentence, no buzzwords, <=140 chars","scores":{${axes}: <0-10>...},"slop_note":"one line on AI-slop smell"}`;
+Also judge OPEN-SOURCE READINESS + legality: could this be safely published as open source under a company's real name, or is it illegal / ToS-breaking / reputationally toxic (game cheats, piracy/cracks, gambling, spoofing, DDoS/malware, private-server revival, AI-subscription resale, scrapers that break ToS)?
+
+Return JSON: {"description":"one plain sentence, no buzzwords, <=140 chars","scores":{${axes}: <0-10>...},"slop_note":"one line on AI-slop smell","legal":{"oss":"safe|borderline|no","legal":"clean|gray|illegal-risk","flags":["short-tag"...],"reason":"one line","license":"one line license recommendation"}}`;
 
   try {
     const res = await fetch(`${BASE}/chat/completions?api-version=2024-05-01-preview`, {

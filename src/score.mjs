@@ -2,6 +2,7 @@
 // No network, no LLM: deterministic and explainable. The optional AI pass
 // (src/ai.mjs) can override the subjective categories afterward.
 import { CATEGORIES, applyCaps, grade, tier, slopRisk } from "./rubric.mjs";
+import { assessLegal } from "./legal.mjs";
 
 const clamp = (n) => Math.max(0, Math.min(10, Math.round(n)));
 
@@ -134,6 +135,7 @@ export function scoreRepo(repo, readme, tree, ci) {
     description: synthDescription(repo, s),
     strengths: topN(sc, 3, true),
     weaknesses: topN(sc, 3, false),
+    legal: assessLegal(repo, readme, tree),
   };
 }
 
