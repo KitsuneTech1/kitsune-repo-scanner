@@ -21,17 +21,37 @@ const BINARY_EXT = /\.(exe|msi|iso|dmg|dll|so|bin|zip|7z|rar|gz|jar|apk|pdb)$/i;
 const BIG_BIN_MB = 8;
 const HUGE_FILE_MB = 25;
 
-const PRIVATE_IP = /\b(192\.168|10\.\d{1,3}|172\.(1[6-9]|2\d|3[01]))\.\d{1,3}(\.\d{1,3})?\b/;
+// Require a full 4-octet dotted quad in a private range. A 3-number match like
+// "10.24.1" is almost always a semver/version string, not an IP, so we do not count it.
+const OCTET = "(25[0-5]|2[0-4]\\d|1?\\d?\\d)";
+const PRIVATE_IP = new RegExp(
+  `\\b(192\\.168\\.${OCTET}\\.${OCTET}` +
+  `|10\\.${OCTET}\\.${OCTET}\\.${OCTET}` +
+  `|172\\.(1[6-9]|2\\d|3[01])\\.${OCTET}\\.${OCTET})\\b`);
 const EMAIL = /\b[\w.+-]+@[\w-]+\.[a-z]{2,}\b/gi;
 
 // Secret patterns for scanning tracked source/config file CONTENT (not just READMEs).
 // This is what catches a token hardcoded in index.html, a key in a config.json, etc.
+// Assignment of a secret-like keyword to a quoted value. The value is captured
+// so we can reject readable identifiers (localStorage keys, slugs) and keep only
+// values that actually look like credentials.
+const CRED_ASSIGN = /\b[a-z]*[_-]?(?:api[_-]?key|[_-]?key|token|secret|password|passwd|auth)\b['"]?\s*[:=]\s*['"]([^'"\s]{8,})['"]/i;
 const CONTENT_SECRET = [
-  [/\b[a-z]*[_-]?(api[_-]?key|[_-]?key|token|secret|password|passwd|auth)\b['"]?\s*[:=]\s*['"][^'"\s]{8,}['"]/i, "hardcoded credential"],
   [/\b(AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9]{20,})\b/, "known key format"],
   [/-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----/, "private key block"],
   [/\b(basic|bearer)\s+[A-Za-z0-9+/=_-]{16,}/i, "authorization header value"],
 ];
+
+// Does a captured value look like a real secret vs a readable identifier/slug?
+// Real secrets: high-entropy, mixed case + digits, or long. Reject snake_case /
+// kebab / dotted identifiers and short dictionary words.
+function looksSecret(v) {
+  if (!v || v.length < 8) return false;
+  if (/^[a-z0-9]+([._-][a-z0-9]+)*$/.test(v) && v.length < 24) return false; // slug / storage key / version
+  if (/^[A-Za-z]+$/.test(v) && v.length < 16) return false;                  // plain word
+  const hasUpper = /[A-Z]/.test(v), hasLower = /[a-z]/.test(v), hasDigit = /\d/.test(v);
+  return v.length >= 20 || ((hasUpper && hasLower) || (hasDigit && (hasUpper || hasLower)));
+}
 // Files worth reading (small config / client code). Extensions + notable names.
 const SCANNABLE = /\.(html?|js|mjs|ts|jsx|tsx|json|ya?ml|toml|ini|env|cfg|conf|sh|ps1|py|php|rb)$/i;
 const SCAN_MAX_FILES = 12;
@@ -43,6 +63,9 @@ export function pickScanTargets(fullTree = []) {
   return (fullTree || [])
     .filter(e => e.path && SCANNABLE.test(e.path) && (e.size || 0) <= SCAN_MAX_KB * 1024)
     .filter(e => !/(^|\/)(node_modules|dist|build|target|vendor|\.venv)\//.test(e.path))
+    // skip minified and bundled vendor libraries (jquery, bootstrap, chunk hashes): noise, not our code
+    .filter(e => !/\.min\.(js|css)$|(^|\/)(jquery|bootstrap|angular|vue|react|lodash|three)[.\-]|(^|\/)_nuxt\/|[.\-][A-Za-z0-9]{8}\.js$/i.test(e.path))
+    .filter(e => !/package-lock\.json$|yarn\.lock$|pnpm-lock\.yaml$/i.test(e.path))
     .sort((a, b) => (a.path.split("/").length - b.path.split("/").length)
       || (/config|secret|env|auth|credential|\.js$|\.html?$/i.test(b.path) ? 1 : 0)
         - (/config|secret|env|auth|credential|\.js$|\.html?$/i.test(a.path) ? 1 : 0))
@@ -58,7 +81,12 @@ export function scanContents(files = {}) {
   const flags = [];
   for (const [path, text] of Object.entries(files)) {
     if (!text) continue;
-    for (const [re, label] of CONTENT_SECRET) {
+    let hit = false;
+    const cred = text.match(CRED_ASSIGN);
+    if (cred && !PLACEHOLDER.test(cred[0]) && looksSecret(cred[1])) {
+      flags.push(`hardcoded credential in ${path}`); hit = true;
+    }
+    if (!hit) for (const [re, label] of CONTENT_SECRET) {
       const m = text.match(re);
       if (m && !PLACEHOLDER.test(m[0])) { flags.push(`${label} in ${path}`); break; }
     }
