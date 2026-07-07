@@ -49,6 +49,7 @@ export function buildReport(data) {
     dn: g.weaknesses.map(x => x.name),
     cap: g.caps || [],
     lg: g.legal || { oss: "safe", legal: "clean", flags: [], reason: "", license: "" },
+    hy: (g.hygiene && g.hygiene.flags) || [],
     s: CATEGORIES.map(c => (g.scores[c.id] ?? 0) * 100),
   }));
 
@@ -172,6 +173,9 @@ const HTML_HEAD = `<meta charset="utf-8">
   .tag.up{color:var(--accent);border-color:var(--accent2)} .tag.dn{color:var(--c3);border-color:var(--c3)}
   .slopmeter{display:flex;align-items:center;gap:9px;margin-top:5px}
   .slopmeter .sb{flex:1;height:8px;border-radius:4px;background:var(--panel2);overflow:hidden}
+  .hylist{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 4px}
+  .hyflag{font-family:var(--mono);font-size:10.5px;color:var(--ink2);background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:3px 7px}
+  .hyflag.bad{color:#d46a5a;border-color:#d46a5a}
   .slopmeter .sb i{display:block;height:100%;border-radius:4px}
   .slopmeter .sv{font-family:var(--mono);font-size:12px;font-weight:700;width:26px;text-align:right}
   .capnote{font-family:var(--mono);font-size:10.5px;color:var(--c3);margin-top:8px}
@@ -284,6 +288,7 @@ function detail(d){
     '<div class="dside">'+
       '<div class="dl2">what it is</div><p>'+esc(d.ds)+'</p>'+
       legalBox+
+      (d.hy&&d.hy.length?'<div class="dl2">hygiene &amp; exposure</div><div class="hylist">'+d.hy.map(f=>'<span class="hyflag'+(/env\/key|PII|LAN IP/.test(f)?' bad':'')+'">'+esc(f)+'</span>').join("")+'</div>':'')+
       '<div class="dl2">AI-slop risk</div><div class="slopmeter"><span class="sb"><i style="width:'+d.sl+'%;background:'+slopColor(d.sl)+'"></i></span><span class="sv" style="color:'+slopColor(d.sl)+'">'+d.sl+'</span></div>'+
       '<div class="dl2">sells it</div><div class="taglist">'+up+'</div>'+
       '<div class="dl2">holds it back</div><div class="taglist">'+dn+'</div>'+

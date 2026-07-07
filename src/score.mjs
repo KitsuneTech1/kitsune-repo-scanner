@@ -3,6 +3,7 @@
 // (src/ai.mjs) can override the subjective categories afterward.
 import { CATEGORIES, applyCaps, grade, tier, slopRisk } from "./rubric.mjs";
 import { assessLegal } from "./legal.mjs";
+import { assessHygiene } from "./hygiene.mjs";
 
 const clamp = (n) => Math.max(0, Math.min(10, Math.round(n)));
 
@@ -70,7 +71,7 @@ export function signals(repo, readme, tree, ci) {
 // so this is a gentle additive, capped.
 const starLift = (s) => s >= 500 ? 4 : s >= 100 ? 3 : s >= 20 ? 2 : s >= 5 ? 1 : 0;
 
-export function scoreRepo(repo, readme, tree, ci) {
+export function scoreRepo(repo, readme, tree, ci, fullTree = [], contentFlags = []) {
   const s = signals(repo, readme, tree, ci);
   const sc = {};
 
@@ -122,6 +123,7 @@ export function scoreRepo(repo, readme, tree, ci) {
   let raw = 0;
   for (const c of CATEGORIES) raw += (sc[c.id] ?? 0) * c.weight;
   const { capped, caps } = applyCaps(sc, raw);
+  const hygiene = assessHygiene(repo, readme, fullTree, contentFlags);
 
   return {
     scores: sc,
@@ -135,8 +137,19 @@ export function scoreRepo(repo, readme, tree, ci) {
     description: synthDescription(repo, s),
     strengths: topN(sc, 3, true),
     weaknesses: topN(sc, 3, false),
-    legal: assessLegal(repo, readme, tree),
+    legal: escalate(assessLegal(repo, readme, tree), hygiene),
+    hygiene,
   };
+}
+
+// A tracked env/key file or PII exposure makes a "safe" repo borderline until scrubbed.
+function escalate(legal, hygiene) {
+  if (hygiene.exposed && legal.oss === "safe") {
+    legal = { ...legal, oss: "borderline",
+      reason: legal.reason + " BUT hygiene scan found exposure (" +
+        hygiene.flags.filter(f => /env\/key|PII|LAN IP/.test(f)).join("; ") + ") - scrub first." };
+  }
+  return legal;
 }
 
 function topN(sc, n, high) {

@@ -38,6 +38,29 @@ export async function fetchRootTree(owner, name) {
   return [];
 }
 
+// Full recursive file tree (path + size) for hygiene checks. Returns [] on
+// empty repos. GitHub truncates enormous trees; what we get is still useful.
+export async function fetchFullTree(owner, name) {
+  try {
+    const res = await gh(["api", `repos/${owner}/${name}/git/trees/HEAD?recursive=1`]);
+    if (res && Array.isArray(res.tree)) {
+      return res.tree.filter(e => e.type === "blob").map(e => ({ path: e.path, size: e.size || 0 }));
+    }
+  } catch { /* empty repo or no access */ }
+  return [];
+}
+
+// Fetch raw text of a single file (decoded). "" if missing/too big.
+export async function fetchFileText(owner, name, path) {
+  try {
+    const res = await gh(["api", `repos/${owner}/${name}/contents/${path}`]);
+    if (res && res.content && res.encoding === "base64") {
+      return Buffer.from(res.content, "base64").toString("utf8");
+    }
+  } catch { /* missing / too large / binary */ }
+  return "";
+}
+
 // Does the repo have any GitHub Actions workflow file?
 export async function hasWorkflows(owner, name) {
   try {

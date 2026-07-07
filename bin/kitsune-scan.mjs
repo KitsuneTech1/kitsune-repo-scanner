@@ -6,8 +6,9 @@
 // Requires the `gh` CLI, authenticated (`gh auth status`).
 import { writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { listRepos, fetchReadme, fetchRootTree, hasWorkflows } from "../src/github.mjs";
+import { listRepos, fetchReadme, fetchRootTree, hasWorkflows, fetchFullTree, fetchFileText } from "../src/github.mjs";
 import { scoreRepo } from "../src/score.mjs";
+import { pickScanTargets, scanContents } from "../src/hygiene.mjs";
 import { refine, aiEnabled } from "../src/ai.mjs";
 import { buildReport } from "../src/report.mjs";
 import { SUBJECTIVE_APPLY } from "../src/report.mjs";
@@ -46,12 +47,19 @@ console.log(`  ${repos.length} repos to grade\n`);
 
 let done = 0;
 const graded = await mapPool(repos, async (repo) => {
-  const [readme, tree, ci] = await Promise.all([
+  const [readme, tree, ci, fullTree] = await Promise.all([
     fetchReadme(owner, repo.name),
     fetchRootTree(owner, repo.name),
     hasWorkflows(owner, repo.name),
+    fetchFullTree(owner, repo.name),
   ]);
-  const result = scoreRepo(repo, readme, tree, ci);
+  // Bounded content-secret scan: read a handful of small config/client files and grep them.
+  const targets = pickScanTargets(fullTree);
+  const fileTexts = {};
+  await Promise.all(targets.map(async p => { fileTexts[p] = await fetchFileText(owner, repo.name, p); }));
+  const contentFlags = scanContents(fileTexts);
+
+  const result = scoreRepo(repo, readme, tree, ci, fullTree, contentFlags);
 
   if (useAI && aiEnabled()) {
     const ai = await refine(repo, readme);
