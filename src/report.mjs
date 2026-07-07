@@ -40,7 +40,7 @@ export function buildReport(data) {
     n: g.repo.name,
     u: g.repo.url,
     pv: g.repo.isPrivate ? 1 : 0,
-    c: g.repo.primaryLanguage?.name || "—",
+    c: g.repo.primaryLanguage?.name || "-",
     st: g.repo.stargazerCount || 0,
     ts: g.repo.pushedAt ? new Date(g.repo.pushedAt).getTime() : 0,
     sl: g.slopRisk,
@@ -194,7 +194,7 @@ const HTML_HEAD = `<meta charset="utf-8">
   @media(max-width:820px){.podium{grid-template-columns:1fr}.dbox{grid-template-columns:1fr;padding-left:14px}.dim .dl{width:120px}}
 </style>`;
 
-// Client app — no template literals / backticks inside (kept plain to embed safely).
+// Client app - no template literals / backticks inside (kept plain to embed safely).
 const HTML_APP = `
 <header><div class="wrap">
   <p class="kicker" id="kicker"></p>
@@ -232,7 +232,7 @@ function grade(v){for(const b of BANDS)if(v>=b[0])return b[1];return "F-";}
 function slopColor(v){const h=Math.round(150-(v/100)*150);return "hsl("+h+" 55% 52%)";}
 const OSSCLS={safe:"safe",borderline:"border",no:"no"};
 const OSSLBL={safe:"OSS-safe",borderline:"borderline",no:"no-OSS"};
-function ageStr(ts){if(!ts)return "—";const d=(Date.now()-ts)/86400000;if(d<31)return Math.max(1,Math.round(d))+"d";if(d<365)return Math.round(d/30)+"mo";return (d/365).toFixed(1)+"y";}
+function ageStr(ts){if(!ts)return "-";const d=(Date.now()-ts)/86400000;if(d<31)return Math.max(1,Math.round(d))+"d";if(d<365)return Math.round(d/30)+"mo";return (d/365).toFixed(1)+"y";}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 
 function enrich(){const w=PRESETS[preset].w;D.forEach(d=>{d.comp=composite(d,w);d.gr=grade(d.comp);});}
@@ -347,7 +347,6 @@ function boot(){
   const cat=document.getElementById("cat");cat.innerHTML='<option value="">all languages</option>'+P.cats.map(c=>'<option>'+esc(c)+'</option>').join("");
   cat.onchange=render;
   const oss=document.getElementById("oss");
-  const oc={safe:0,borderline:0,no:0};D.forEach(d=>oc[d.lg.oss]=(oc[d.lg.oss]||0)+1);
   oss.innerHTML='<option value="">all OSS status</option>'+
     '<option value="safe">OSS-safe ('+oc.safe+')</option>'+
     '<option value="borderline">borderline ('+oc.borderline+')</option>'+
