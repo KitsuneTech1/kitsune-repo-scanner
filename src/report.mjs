@@ -134,7 +134,7 @@ const HTML_HEAD = `<meta charset="utf-8">
   .presetnote b{color:var(--accent)}
   main{padding:16px 0 70px}
   table{width:100%;border-collapse:collapse;font-size:13px}
-  thead th{position:sticky;top:56px;background:var(--bg);text-align:left;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);font-weight:600;padding:10px 8px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap;user-select:none}
+  thead th{position:sticky;top:var(--ctrl-h,56px);background:var(--bg);text-align:left;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);font-weight:600;padding:10px 8px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap;user-select:none}
   thead th:hover{color:var(--ink)} thead th.sorted{color:var(--accent)}
   th.rk,td.rk{text-align:center;width:44px}
   th.sc,td.sc{text-align:right;font-variant-numeric:tabular-nums}
@@ -218,6 +218,10 @@ const HTML_APP = `
 <footer><div class="wrap" id="foot"></div></footer>
 <script>
 const P=PAYLOAD, D=P.D, DIM=P.DIM, SHORT=P.SHORT, GRP=P.GRP, GL=P.GROUP_LABELS, BANDS=P.BANDS;
+// keep the sticky table header pinned to the real controls-bar height (it wraps at narrow widths)
+{const ctrl=document.querySelector(".controls");
+ const setH=()=>document.documentElement.style.setProperty("--ctrl-h",ctrl.offsetHeight+"px");
+ new ResizeObserver(setH).observe(ctrl);setH();}
 const GORDER=["hook","sentiment","trust","slop","substance","growth"];
 const PRESETS={
   balanced:{label:"Balanced",w:P.DEFAULT_W,d:"The full rubric weights: hook and public sentiment lead, trust and AI-slop next, substance and growth round it out."},
