@@ -9,7 +9,7 @@ HTML scouting report you can sort and filter.
 Built to answer one question fast: *of everything I've made, what's worth releasing, and
 in what order do I post it?*
 
-![report](docs/report.png)
+![report](docs/report.jpeg)
 
 ## What it measures
 
