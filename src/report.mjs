@@ -212,8 +212,7 @@ const HTML_APP = `
   <select id="cat"></select>
   <select id="sort"></select>
   <span class="count" id="count"></span>
-</div></div>
-<div class="wrap"><div class="presetnote" id="pnote"></div></div>
+</div><div class="wrap"><div class="presetnote" id="pnote"></div></div></div>
 <main><div class="wrap scrollx">
   <table><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table>
 </div></main>
