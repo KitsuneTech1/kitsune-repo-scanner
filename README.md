@@ -72,6 +72,19 @@ at it. Without a key, `--ai` silently falls back to heuristics.
 
 ## MCP server
 
+### What is an MCP server?
+
+MCP (Model Context Protocol) is a standard way to give an AI agent new abilities. On
+its own, an agent like Claude can read and write text but cannot reach out and do things.
+An MCP server plugs in a set of tools the agent can call, each one a named action with
+defined inputs, like a function. Once you connect this server, your agent can grade a
+GitHub org, score a single repo, check a repo for leaked secrets before you make it
+public, and rank repos by how well they would do on Reddit. You just ask in plain English,
+for example "audit my repo before I open source it," and the agent picks the right tool
+and runs it. You connect an MCP server once in your agent's settings and it stays available.
+
+### This one
+
 The scanner is also an MCP server, so an AI agent can grade repos, audit them for
 leaked secrets, and pick what to post, all on demand. It speaks JSON-RPC over stdio
 with no SDK dependency.
