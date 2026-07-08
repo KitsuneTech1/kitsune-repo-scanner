@@ -72,14 +72,48 @@ at it. Without a key, `--ai` silently falls back to heuristics.
 
 ## MCP server
 
-The scanner is also an MCP server, so an agent can grade repos on demand:
+The scanner is also an MCP server, so an AI agent can grade repos, audit them for
+leaked secrets, and pick what to post, all on demand. It speaks JSON-RPC over stdio
+with no SDK dependency.
 
 ```bash
 node mcp/server.mjs           # stdio JSON-RPC
 ```
 
-Tools: `scan_org({ owner, includePrivate?, ai? })` and `score_repo({ owner, name, ai? })`.
-Register it with any MCP client (e.g. `claude mcp add repo-scanner -- node /path/mcp/server.mjs`).
+### Tools
+
+| Tool | What it does |
+|---|---|
+| `scan_org({ owner, includePrivate?, ai? })` | Grade every repo in an org/user. Ranked JSON with grades, post-scores, and hygiene flags. |
+| `score_repo({ owner, name, ai? })` | Full 30-category breakdown for one repo. |
+| `audit_repo({ owner, name })` | Security pass before open-sourcing: finds leaked credentials, API keys, private LAN IPs, committed `.env`/key files, and build junk. Returns a go/no-go verdict. |
+| `best_to_post({ owner, top?, includePrivate? })` | Ranks repos by how well they would do on Reddit or HN. Public, OSS-safe only by default. |
+
+### Register it
+
+Claude Code:
+
+```bash
+claude mcp add repo-scanner -- node /absolute/path/to/kitsune-repo-scanner/mcp/server.mjs
+```
+
+Any MCP client (Cursor, Claude Desktop, etc.), in the `mcpServers` config:
+
+```json
+{
+  "mcpServers": {
+    "repo-scanner": {
+      "command": "node",
+      "args": ["/absolute/path/to/kitsune-repo-scanner/mcp/server.mjs"],
+      "env": { "SCAN_PII": "your-lan-ip,your-handle,your-domain" }
+    }
+  }
+}
+```
+
+Requirements: the `gh` CLI authenticated on the host. `SCAN_PII` (optional, comma-separated)
+adds your own IPs/handles/domains to the exposure scan. Set `AZURE_FOUNDRY_KEY` to enable the
+`ai: true` refinement pass.
 
 ## How scoring works
 
