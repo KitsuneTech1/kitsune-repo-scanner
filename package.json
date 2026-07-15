@@ -10,8 +10,19 @@
     "scan": "node bin/kitsune-scan.mjs",
     "mcp": "node mcp/server.mjs"
   },
-  "keywords": ["github", "repo", "scanner", "rubric", "grading", "ai-slop", "open-source", "cli"],
-  "license": "MIT",
-  "engines": { "node": ">=18" },
+  "keywords": [
+    "github",
+    "repo",
+    "scanner",
+    "rubric",
+    "grading",
+    "ai-slop",
+    "open-source",
+    "cli"
+  ],
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {}
 }
