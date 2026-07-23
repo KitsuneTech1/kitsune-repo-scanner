@@ -18,6 +18,7 @@ import { pickScanTargets, scanContents } from "../src/hygiene.mjs";
 import { refine, aiEnabled } from "../src/ai.mjs";
 import { SUBJECTIVE_APPLY } from "../src/report.mjs";
 import { CATEGORIES } from "../src/rubric.mjs";
+import { auditLocalRepo } from "../src/local.mjs";
 
 // "Post first" / Reddit weighting: hook, public sentiment, shareability and
 // virality dominate; code substance barely counts. Same weights as the report's
@@ -57,13 +58,34 @@ const TOOLS = [
   },
   {
     name: "audit_repo",
-    description: "Security/hygiene audit of one repo before open-sourcing: scans tracked files for leaked credentials, API keys, private LAN IPs, committed .env/key files, build junk, and empty-repo/no-description issues. Returns findings, exposure verdict, and OSS-readiness (safe/borderline/no).",
+    description: "Security/hygiene audit of one GitHub repo or an explicitly allowlisted local Git root before open-sourcing. Scans tracked files for leaked credentials, API keys, private LAN IPs, committed .env/key files, and build junk. Returns findings, exposure verdict, and OSS-readiness.",
     inputSchema: {
       type: "object",
       properties: {
-        owner: { type: "string" }, name: { type: "string" },
+        owner: { type: "string", minLength: 1 },
+        name: { type: "string", minLength: 1 },
+        repoPath: {
+          type: "string",
+          minLength: 1,
+          description: "Absolute local Git root under REPO_SCANNER_LOCAL_ROOTS. Only tracked files are scanned.",
+        },
       },
-      required: ["owner", "name"],
+      oneOf: [
+        {
+          required: ["owner", "name"],
+          not: { required: ["repoPath"] },
+        },
+        {
+          required: ["repoPath"],
+          not: {
+            anyOf: [
+              { required: ["owner"] },
+              { required: ["name"] },
+            ],
+          },
+        },
+      ],
+      additionalProperties: false,
     },
   },
   {
@@ -130,6 +152,15 @@ async function callTool(name, args) {
     return { ...gradeSummary(repo, r), scores: r.scores };
   }
   if (name === "audit_repo") {
+    if (args.repoPath !== undefined) {
+      if (args.owner !== undefined || args.name !== undefined) {
+        throw new Error("audit_repo accepts either owner/name or repoPath, not both");
+      }
+      return auditLocalRepo(args.repoPath);
+    }
+    if (!args.owner || !args.name) {
+      throw new Error("audit_repo requires owner/name or repoPath");
+    }
     const [repo] = (await listRepos(args.owner, { limit: 500 })).filter(r => r.name === args.name);
     if (!repo) throw new Error(`repo not found: ${args.owner}/${args.name}`);
     const r = await analyze(args.owner, repo, false);
@@ -177,7 +208,7 @@ async function handle(req) {
   const { id, method, params } = req;
   try {
     if (method === "initialize") {
-      return send({ jsonrpc: "2.0", id, result: { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "kitsune-repo-scanner", version: "0.2.0" } } });
+      return send({ jsonrpc: "2.0", id, result: { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "kitsune-repo-scanner", version: "0.3.0" } } });
     }
     if (method === "tools/list") return send({ jsonrpc: "2.0", id, result: { tools: TOOLS } });
     if (method === "tools/call") {
