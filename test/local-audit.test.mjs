@@ -81,6 +81,19 @@ test('audit_repo scans only tracked files in an allowlisted local Git root', asy
   assert.deepEqual(cleanResult.seriousFindings, []);
   assert.equal(cleanResult.trackedFiles, 2);
 
+  fs.writeFileSync(
+    path.join(repo, 'app.js'),
+    'const api_key = "abcdefghijklmnopqrstuvwxyz123456";\n',
+  );
+  const dirty = await mcp.request('tools/call', {
+    name: 'audit_repo',
+    arguments: { repoPath: repo },
+  });
+  const dirtyResult = JSON.parse(dirty.result.content[0].text);
+  assert.equal(dirtyResult.exposed, false, 'audit must read committed bytes, not dirty worktree bytes');
+  assert.equal(dirtyResult.commit, cleanResult.commit);
+  fs.writeFileSync(path.join(repo, 'app.js'), 'console.log("safe");\n');
+
   fs.writeFileSync(path.join(repo, 'config.json'), '{"endpoint":"http://192.168.1.30"}\n');
   await execFileAsync('git', ['-C', repo, 'add', 'config.json']);
   await execFileAsync('git', ['-C', repo, 'commit', '-m', 'exposure fixture']);

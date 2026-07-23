@@ -16,7 +16,7 @@ function isWithin(root, target) {
       && !path.isAbsolute(relative));
 }
 
-async function git(repoPath, args) {
+async function git(repoPath, args, { trim = true } = {}) {
   const { stdout } = await execFileAsync(
     'git',
     ['-C', repoPath, ...args],
@@ -26,7 +26,7 @@ async function git(repoPath, args) {
       windowsHide: true,
     },
   );
-  return stdout.trim();
+  return trim ? stdout.trim() : stdout;
 }
 
 async function allowedLocalRoots() {
@@ -59,26 +59,36 @@ async function resolveAllowedRepo(requestedPath) {
 }
 
 async function trackedTree(repoPath) {
-  const output = await git(repoPath, ['ls-files', '--stage', '-z']);
+  const output = await git(
+    repoPath,
+    ['ls-tree', '-r', '-z', '-l', 'HEAD'],
+    { trim: false },
+  );
   const entries = [];
   for (const record of output.split('\0').filter(Boolean)) {
     const separator = record.indexOf('\t');
     if (separator < 0) throw new Error('git returned a malformed tracked-file record');
-    const [mode] = record.slice(0, separator).split(' ');
+    const header = record.slice(0, separator);
+    const match = /^([0-7]{6}) (blob|commit) ([a-f0-9]{40,64}) +(\d+|-)$/.exec(header);
+    if (!match) throw new Error('git returned an unsupported tracked object');
+    const [, mode, objectType, objectId, rawSize] = match;
     const relativePath = record.slice(separator + 1);
     const absolutePath = path.resolve(repoPath, relativePath);
     if (!isWithin(repoPath, absolutePath)) {
       throw new Error('tracked file resolves outside the repository');
     }
-    const stat = await fs.promises.lstat(absolutePath);
     entries.push({
       path: relativePath.replaceAll(path.sep, '/'),
-      size: stat.isFile() && mode !== '120000' ? stat.size : 0,
-      readable: stat.isFile() && mode !== '120000',
-      absolutePath,
+      size: objectType === 'blob' && mode !== '120000' ? Number(rawSize) : 0,
+      readable: objectType === 'blob' && mode !== '120000',
+      objectId,
     });
   }
   return entries;
+}
+
+async function readCommittedText(repoPath, entry) {
+  return git(repoPath, ['cat-file', 'blob', entry.objectId], { trim: false });
 }
 
 async function localFileContext(repoPath, entries) {
@@ -90,13 +100,13 @@ async function localFileContext(repoPath, entries) {
     && /^readme(?:\.[a-z0-9_-]+)?$/i.test(entry.path)
   ));
   const readme = readmeEntry
-    ? await fs.promises.readFile(readmeEntry.absolutePath, 'utf8')
+    ? await readCommittedText(repoPath, readmeEntry)
     : '';
   const targets = new Set(pickScanTargets(entries));
   const fileTexts = {};
   for (const entry of entries) {
     if (entry.readable && targets.has(entry.path)) {
-      fileTexts[entry.path] = await fs.promises.readFile(entry.absolutePath, 'utf8');
+      fileTexts[entry.path] = await readCommittedText(repoPath, entry);
     }
   }
   const packageEntry = entries.find((entry) => entry.path === 'package.json' && entry.readable);
@@ -104,7 +114,7 @@ async function localFileContext(repoPath, entries) {
   if (packageEntry) {
     try {
       description = JSON.parse(
-        await fs.promises.readFile(packageEntry.absolutePath, 'utf8'),
+        await readCommittedText(repoPath, packageEntry),
       ).description || '';
     } catch {
       // Malformed project metadata is reported through the normal hygiene findings.
