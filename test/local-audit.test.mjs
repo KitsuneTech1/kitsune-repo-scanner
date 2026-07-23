@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 import { promisify } from 'node:util';
+import { auditLocalRepo } from '../src/local.mjs';
 
 const execFileAsync = promisify(execFile);
 const serverPath = path.join(import.meta.dirname, '..', 'mcp', 'server.mjs');
@@ -122,4 +123,56 @@ test('audit_repo rejects a local repository outside configured roots', async (t)
   });
   assert.equal(response.error.code, -32000);
   assert.match(response.error.message, /outside configured local roots/i);
+});
+
+test('auditLocalRepo never reports a newer commit than the tree it scanned', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'repo-scanner-race-'));
+  const originalRoots = process.env.REPO_SCANNER_LOCAL_ROOTS;
+  process.env.REPO_SCANNER_LOCAL_ROOTS = root;
+  t.after(() => {
+    if (originalRoots === undefined) delete process.env.REPO_SCANNER_LOCAL_ROOTS;
+    else process.env.REPO_SCANNER_LOCAL_ROOTS = originalRoots;
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  for (const delay of [20, 40, 80, 160]) {
+    const repo = await createRepo(root, `race-${delay}`);
+    for (let index = 0; index < 12; index += 1) {
+      fs.writeFileSync(
+        path.join(repo, `config-${String(index).padStart(2, '0')}.json`),
+        JSON.stringify({ safe: 'x'.repeat(120_000) }),
+      );
+    }
+    await execFileAsync('git', ['-C', repo, 'add', '.']);
+    await execFileAsync('git', ['-C', repo, 'commit', '-m', 'large safe tree']);
+
+    const audit = auditLocalRepo(repo);
+    const advanceHead = new Promise((resolve, reject) => {
+      setTimeout(async () => {
+        try {
+          fs.writeFileSync(
+            path.join(repo, 'config-00.json'),
+            '{"api_key":"abcdefghijklmnopqrstuvwxyz123456"}\n',
+          );
+          await execFileAsync('git', ['-C', repo, 'add', 'config-00.json']);
+          await execFileAsync('git', ['-C', repo, 'commit', '-m', 'advance during audit']);
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      }, delay);
+    });
+
+    const [result] = await Promise.all([audit, advanceHead]);
+    const currentHead = (await execFileAsync(
+      'git',
+      ['-C', repo, 'rev-parse', 'HEAD'],
+      { encoding: 'utf8' },
+    )).stdout.trim();
+    assert.equal(
+      result.commit === currentHead && result.exposed === false,
+      false,
+      `reported commit ${currentHead} without scanning its committed credential at ${delay}ms`,
+    );
+  }
 });

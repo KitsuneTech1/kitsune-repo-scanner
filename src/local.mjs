@@ -58,10 +58,10 @@ async function resolveAllowedRepo(requestedPath) {
   return repoPath;
 }
 
-async function trackedTree(repoPath) {
+async function trackedTree(repoPath, commit) {
   const output = await git(
     repoPath,
-    ['ls-tree', '-r', '-z', '-l', 'HEAD'],
+    ['ls-tree', '-r', '-z', '-l', commit],
     { trim: false },
   );
   const entries = [];
@@ -132,7 +132,8 @@ async function localFileContext(repoPath, entries) {
 
 export async function auditLocalRepo(requestedPath) {
   const repoPath = await resolveAllowedRepo(requestedPath);
-  const entries = await trackedTree(repoPath);
+  const commit = await git(repoPath, ['rev-parse', 'HEAD']);
+  const entries = await trackedTree(repoPath, commit);
   const {
     repo,
     readme,
@@ -157,7 +158,7 @@ export async function auditLocalRepo(requestedPath) {
     url: null,
     private: true,
     source: 'local-tracked-files',
-    commit: await git(repoPath, ['rev-parse', 'HEAD']),
+    commit,
     trackedFiles: entries.length,
     exposed: hygiene.exposed,
     ossReadiness: legal.oss,
