@@ -8,7 +8,8 @@
   },
   "scripts": {
     "scan": "node bin/kitsune-scan.mjs",
-    "mcp": "node mcp/server.mjs"
+    "mcp": "node mcp/server.mjs",
+    "test": "node --test test/*.test.mjs"
   },
   "keywords": [
     "github",

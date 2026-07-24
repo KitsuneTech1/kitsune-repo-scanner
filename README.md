@@ -44,6 +44,12 @@ node bin/kitsune-scan.mjs <org> --open
 node bin/kitsune-scan.mjs <org> --include-private --ai --open
 ```
 
+Run the test suite with:
+
+```bash
+npm test
+```
+
 Flags:
 
 | Flag | Effect |

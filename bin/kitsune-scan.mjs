@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// kitsune-scan — grade every repo in a GitHub org/user on the market-reception rubric.
+// kitsune-scan: grade every repo in a GitHub org/user on the market-reception rubric.
 //
 //   kitsune-scan <owner> [--ai] [--include-private] [--out DIR] [--limit N] [--open]
 //
@@ -100,8 +100,12 @@ if (graded.length) {
 console.log(`\n  report: ${htmlPath}\n`);
 
 if (flag("--open")) {
-  const { exec } = await import("node:child_process");
-  const cmd = process.platform === "win32" ? `start "" "${htmlPath}"`
-            : process.platform === "darwin" ? `open "${htmlPath}"` : `xdg-open "${htmlPath}"`;
-  exec(cmd);
+  const { spawn } = await import("node:child_process");
+  const command = process.platform === "win32" ? "explorer.exe"
+                : process.platform === "darwin" ? "open" : "xdg-open";
+  spawn(command, [htmlPath], {
+    detached: true,
+    stdio: "ignore",
+    windowsHide: true,
+  }).unref();
 }
