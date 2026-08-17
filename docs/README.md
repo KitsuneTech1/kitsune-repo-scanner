@@ -54,4 +54,4 @@ Output: `report/index.html` (the scouting report) and `report/report.json` (raw 
 
 ## License
 
-GNU AGPLv3. See [LICENSE](../LICENSE).
+MIT. See [LICENSE](../LICENSE).

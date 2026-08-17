@@ -147,4 +147,4 @@ so treat the ranking as "what to polish and post first," which is exactly what i
 
 ## License
 
-GNU AGPLv3. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

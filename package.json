@@ -21,7 +21,7 @@
     "open-source",
     "cli"
   ],
-  "license": "AGPL-3.0-only",
+  "license": "MIT",
   "engines": {
     "node": ">=18"
   },
